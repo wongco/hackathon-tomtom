@@ -16,13 +16,14 @@ router.get('/', async (req, res, next) => {
       url: `${API_BASE}/projects?key=${API_KEY}`,
       method: 'get'
     });
+
     return res.json(apiResult.data);
   } catch (error) {
     return next(error);
   }
 });
 
-/** POST - /projects/:username
+/** POST - /projects
  * desc: add a project
  */
 router.post('/', async (req, res, next) => {
@@ -37,6 +38,41 @@ router.post('/', async (req, res, next) => {
     });
 
     return res.json(apiResult.data);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/** GET - /projects/:projectId
+ * desc: update the name of a specific Project
+ */
+router.get('/:projectId', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+
+    const apiResult = await axios({
+      url: `${API_BASE}/projects/${projectId}?key=${API_KEY}`,
+      method: 'get'
+    });
+
+    // get individual fence data and append to final json results
+    const { fences } = apiResult.data;
+    const fenceIds = fences.map(fenceObj => fenceObj.id);
+
+    const fenceIdsPromises = fenceIds.map(fenceId => {
+      const apiResultPromise = axios({
+        url: `${API_BASE}/fences/${fenceId}?key=${API_KEY}`,
+        method: 'get'
+      });
+      return apiResultPromise;
+    });
+
+    const fenceResults = await Promise.all(fenceIdsPromises);
+    const fenceCleanData = fenceResults.map(fenceData => fenceData.data);
+
+    const { id, name, defaultObjects } = apiResult.data;
+
+    return res.json({ id, name, fences: fenceCleanData, defaultObjects });
   } catch (error) {
     return next(error);
   }
@@ -74,6 +110,26 @@ router.delete('/:projectId', async (req, res, next) => {
       method: 'delete'
     });
 
+    return res.json(apiResult.data);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/** POST - /:projectId/fence
+ * desc: add a geofence to a specific project
+ */
+router.post('/:projectId/fence', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const data = req.body;
+    const apiResult = await axios({
+      url: `${API_BASE}/projects/${projectId}/fence?key=${API_KEY}&adminKey=${ADMIN_KEY}`,
+      method: 'post',
+      data
+    });
+
+    // return res.json({ data });
     return res.json(apiResult.data);
   } catch (error) {
     return next(error);
