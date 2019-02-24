@@ -118,6 +118,7 @@ router.delete('/:projectId', async (req, res, next) => {
 });
 
 /** POST - /:projectId/fence
+ 
  * desc: add a geofence to a specific project
  * { // req body data: note coordinates are [long, lat]
       "name": "The Bird",
@@ -155,39 +156,44 @@ router.post('/:projectId/fence', async (req, res, next) => {
 });
 
 /** POST - /projects/:projectId/report
- * desc: get a list of projects
- * input (request body): { coordinates: { longitude, latitude }}
+ * desc: get a list of fence reports
+ * input (request body): { longitude, latitude }
+ * optional input (request body): { range }
  */
-// router.get('/:projectId/report', async (req, res, next) => {
-//   try {
-//     const { projectId } = req.params;
-//     const { longitude, latitude } = req.body;
+router.post('/:projectId/report', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const { longitude, latitude, range } = req.body;
 
-//     console.log(longitude, latitude, projectId);
-//     // hit tom tom api with report request
+    const apiResult = await axios({
+      url: `${API_BASE}/report/${projectId}?key=${API_KEY}&point=${longitude},${latitude}&range=${range ||
+        100}`,
+      method: 'get'
+    });
 
-//     // parse inside and outside ids
+    const rawInsideFences = apiResult.data.inside.features;
+    const rawOutsideFences = apiResult.data.outside.features;
 
-//     // get details from tom tom for inside and outside ids
+    const inside = rawInsideFences.map(fence => {
+      const { id, name, distance, properties } = fence;
+      return { id, name, distance, ...properties };
+    });
 
-//     //     "Report" GET request syntax:
-//     // https://api.tomtom.com/geofencing/1/report/projectId?key=apiKey&point=longitude,latitude
-//     // (fill in projectId, apiKey, longitude, latitude)
+    const outside = rawOutsideFences.map(fence => {
+      const { id, name, distance, properties } = fence;
+      return { id, name, distance, ...properties };
+    });
 
-//     // response.inside.features is an array of overlapping geofences (and response.outside.features is an array of non-overlapping geofences)
-
-//     // const apiResult = await axios({
-//     //   url: `${API_BASE}/reports/projects?key=${API_KEY}`,
-//     //   method: 'get'
-//     // });
-
-//     // return res.json(apiResult.data);
-//     return res.json({
-//       test: 'woooo'
-//     });
-//   } catch (error) {
-//     return next(error);
-//   }
-// });
+    return res.json({
+      fences: {
+        inside,
+        outside
+      }
+    });
+  } catch (error) {
+    console.log(error.response.data.message);
+    return next(error);
+  }
+});
 
 module.exports = router;

@@ -1,6 +1,10 @@
 /** Express app */
 const express = require('express');
+const cors = require('cors');
 const app = express();
+
+// class models
+const APIError = require('./models/ApiError');
 
 // don't provide http logging during automated tests
 if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'production') {
@@ -9,8 +13,8 @@ if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'production') {
   app.use(morgan('tiny'));
 }
 
-// class models
-const APIError = require('./models/ApiError');
+// enable cors on all routes
+app.use(cors());
 
 // middleware for parsing req.body and json
 app.use(express.json());
